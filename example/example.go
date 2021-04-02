@@ -34,8 +34,12 @@ func main() {
 	})
 
 	v3.Get("*id/done", func(c *gee.Context) {
-		fmt.Println("fire desk request")
-		c.Data(http.StatusOK, []byte("desk fire "+c.Param("id")))
+		fmt.Println("fire done request")
+		c.Data(http.StatusOK, []byte("desk done "+c.Param("id")))
+	})
+	v3.Get(":name/fine", func(c *gee.Context) {
+		fmt.Println("fire fine request")
+		c.Data(http.StatusOK, []byte("desk fine "+c.Param("name")))
 	})
 	engine.Run(":9090")
 }
