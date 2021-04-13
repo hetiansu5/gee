@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type H map[string]interface{}
@@ -50,19 +51,19 @@ func (c *Context) Param(key string) string {
 	return c.params[key]
 }
 
-func (c *Context) Page403(){
+func (c *Context) Page403() {
 	c.String(http.StatusForbidden, "Access Forbidden")
 }
 
-func (c *Context) Page404(){
+func (c *Context) Page404() {
 	c.String(http.StatusNotFound, "Not Found")
 }
 
-func (c *Context) Page405(){
+func (c *Context) Page405() {
 	c.String(http.StatusMethodNotAllowed, "Method Not Allowed")
 }
 
-func (c *Context) Page500(){
+func (c *Context) Page500() {
 	c.String(http.StatusInternalServerError, "Internal Server Error")
 }
 
@@ -86,9 +87,30 @@ func (c *Context) String(statusCode int, format string, a ...interface{}) {
 	c.Data(statusCode, []byte(fmt.Sprintf(format, a...)))
 }
 
+func (c *Context) Chunks(statusCode int, chunks []string) {
+	c.SetHeader("Content-Type", "text/plain")
+	c.SetHeader("Transfer-Encoding", "chunked")
+	c.Status(statusCode)
+	for _, chunk := range chunks {
+		if len(chunk) == 0 {
+			continue
+		}
+		//c.writeString(fmt.Sprintf("%x\r\n", len(chunk)))
+		c.writeString(fmt.Sprintf("%s\r\n", chunk))
+		c.Flush()
+		time.Sleep(time.Second)
+	}
+	//c.writeString("0\r\n\r\n")
+	//c.Flush()
+}
+
 func (c *Context) Data(statusCode int, data []byte) {
 	c.Status(statusCode)
-	c.Writer.Write(data)
+	_, _ = c.Writer.Write(data)
+}
+
+func (c *Context) writeString(data string) {
+	_, _ = c.Writer.Write([]byte(data))
 }
 
 func (c *Context) Status(statusCode int) {
@@ -97,4 +119,8 @@ func (c *Context) Status(statusCode int) {
 
 func (c *Context) SetHeader(key string, value string) {
 	c.Writer.Header().Set(key, value)
+}
+
+func (c *Context) Flush() {
+	c.Writer.(http.Flusher).Flush()
 }

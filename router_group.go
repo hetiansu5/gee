@@ -4,6 +4,35 @@ import (
 	"sync"
 )
 
+const (
+	MethodGet     = "GET"
+	MethodPost    = "POST"
+	MethodPut     = "PUT"
+	MethodDelete  = "DELETE"
+	MethodPatch   = "PATCH"
+	MethodHead    = "HEAD"
+	MethodOptions = "OPTIONS"
+)
+
+var methods = []string{
+	MethodGet, MethodPost, MethodPut, MethodDelete, MethodPatch, MethodHead, MethodOptions,
+}
+
+// IRoutes defines all router handle interface.
+type IRoutes interface {
+	Use(...HandlerFunc) IRoutes
+
+	Handle(string, string, ...HandlerFunc) IRoutes
+	Any(string, ...HandlerFunc) IRoutes
+	GET(string, ...HandlerFunc) IRoutes
+	POST(string, ...HandlerFunc) IRoutes
+	DELETE(string, ...HandlerFunc) IRoutes
+	PATCH(string, ...HandlerFunc) IRoutes
+	PUT(string, ...HandlerFunc) IRoutes
+	OPTIONS(string, ...HandlerFunc) IRoutes
+	HEAD(string, ...HandlerFunc) IRoutes
+}
+
 type RouterGroup struct {
 	engine         *Engine
 	parent         *RouterGroup
@@ -20,8 +49,9 @@ func newRouterGroup(engine *Engine, parent *RouterGroup) *RouterGroup {
 	}
 }
 
-func (g *RouterGroup) Use(middlewares ...HandlerFunc) {
+func (g *RouterGroup) Use(middlewares ...HandlerFunc) *RouterGroup {
 	g.middlewares = append(g.middlewares, middlewares...)
+	return g
 }
 
 func (g *RouterGroup) insert(parts []string, height int) *RouterGroup {
@@ -35,28 +65,48 @@ func (g *RouterGroup) insert(parts []string, height int) *RouterGroup {
 	return child.insert(parts, height+1)
 }
 
-func (g *RouterGroup) Get(path string, handler HandlerFunc) {
-	g.addRouter("GET", g.genFullPath(path), handler)
+func (g *RouterGroup) Get(path string, handlers ...HandlerFunc) *RouterGroup {
+	return g.addRouter("GET", g.genFullPath(path), handlers)
 }
 
-func (g *RouterGroup) POST(path string, handler HandlerFunc) {
-	g.addRouter("POST", g.genFullPath(path), handler)
+func (g *RouterGroup) POST(path string, handlers ...HandlerFunc) *RouterGroup {
+	return g.addRouter("POST", g.genFullPath(path), handlers)
 }
 
-func (g *RouterGroup) PUT(path string, handler HandlerFunc) {
-	g.addRouter("PUT", g.genFullPath(path), handler)
+func (g *RouterGroup) PUT(path string, handlers ...HandlerFunc) *RouterGroup {
+	return g.addRouter("PUT", g.genFullPath(path), handlers)
 }
 
-func (g *RouterGroup) DELETE(path string, handler HandlerFunc) {
-	g.addRouter("DELETE", g.genFullPath(path), handler)
+func (g *RouterGroup) DELETE(path string, handlers ...HandlerFunc) *RouterGroup {
+	return g.addRouter("DELETE", g.genFullPath(path), handlers)
 }
 
-func (g *RouterGroup) addRouter(method string, pattern string, handler HandlerFunc) {
+func (g *RouterGroup) PATCH(path string, handlers ...HandlerFunc) *RouterGroup {
+	return g.addRouter("PATCH", g.genFullPath(path), handlers)
+}
+
+func (g *RouterGroup) HEAD(path string, handlers ...HandlerFunc) *RouterGroup {
+	return g.addRouter("HEAD", g.genFullPath(path), handlers)
+}
+
+func (g *RouterGroup) OPTIONS(path string, handlers ...HandlerFunc) *RouterGroup {
+	return g.addRouter("OPTIONS", g.genFullPath(path), handlers)
+}
+
+func (g *RouterGroup) ANY(path string, handlers ...HandlerFunc) *RouterGroup {
+	for _, method := range methods {
+		g.addRouter(method, path, handlers)
+	}
+	return g
+}
+
+func (g *RouterGroup) addRouter(method string, pattern string, handlers HandlersChain) *RouterGroup {
 	groupHandler := GroupHandler{
 		routerGroup: g,
-		handler: handler,
+		handlers:    handlers,
 	}
 	g.engine.router.addRouter(method, pattern, groupHandler)
+	return g
 }
 
 func (g *RouterGroup) Group(prefix string) *RouterGroup {
@@ -85,4 +135,11 @@ func (g *RouterGroup) getNestMiddlewares() []HandlerFunc {
 	g.middlewareInit = true
 	g.middlewares = append(g.parent.getNestMiddlewares(), g.middlewares...)
 	return g.middlewares
+}
+
+func (g *RouterGroup) returnObj() *RouterGroup {
+	if g.parent == nil {
+		return g.engine.RouterGroup
+	}
+	return g
 }

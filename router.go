@@ -4,9 +4,11 @@ import "strings"
 
 type HandlerFunc func(*Context)
 
+type HandlersChain []HandlerFunc
+
 type GroupHandler struct {
 	routerGroup *RouterGroup
-	handler     HandlerFunc
+	handlers    HandlersChain
 }
 
 type Router struct {
@@ -54,7 +56,7 @@ func (r *Router) getFuncHandlers(method string, pattern string) []HandlerFunc {
 	key := formKey(method, pattern)
 	groupHandler := r.handlers[key]
 	middlewares := groupHandler.routerGroup.getNestMiddlewares()
-	return append(middlewares, groupHandler.handler)
+	return append(middlewares, groupHandler.handlers...)
 }
 
 func formatMethod(method string) string {
@@ -62,5 +64,5 @@ func formatMethod(method string) string {
 }
 
 func formKey(method string, pattern string) string {
-	return method + pattern
+	return method + "-" + pattern
 }

@@ -19,6 +19,11 @@ func main() {
 		fmt.Println("fire my :name request")
 		c.HTML(http.StatusOK, "<p>Hi~</p>"+c.Param("name"))
 	})
+
+	engine.Get("/chunks", func(c *gee.Context) {
+		c.Chunks(http.StatusOK, []string{"Name", "Who are you?", "Ne"})
+	})
+
 	v1 := engine.Group("/v1")
 	v1.Use(middleware1)
 
